@@ -1,0 +1,4 @@
+torchmetrics>=0.11.4 
+requests>=2.31.0
+demucs>=4.0.0
+pydub>=0.25.1
