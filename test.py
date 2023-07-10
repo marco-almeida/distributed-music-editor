@@ -12,6 +12,7 @@ import json
 import logging
 import sys
 import time
+from random import randint, sample
 
 import requests
 
@@ -86,6 +87,7 @@ def main(args):
         json_response = r.json()
         logger.info(f"{json_response}")
         eval_music_id = json_response["music_id"]
+        tracks = [track["track_id"] for track in json_response["tracks"]]
     else:
         logger.error("Error: POST /music")
 
@@ -99,7 +101,9 @@ def main(args):
         logger.error("Error: GET /music")
 
     # POST /music/{id}
-    r = requests.post(f"{args.u}/music/{eval_music_id}", json=[5, 6], headers={"Content-Type": "application/json"}, timeout=args.t)
+    r = requests.post(
+        f"{args.u}/music/{eval_music_id}", json=sample(tracks, randint(1, 4)), headers={"Content-Type": "application/json"}, timeout=args.t
+    )
 
     if r.ok:
         logger.info(f"{json_response}")

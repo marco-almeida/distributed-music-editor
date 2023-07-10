@@ -1,15 +1,23 @@
-import pika
-import torch
+from celery import shared_task
 from demucs.apply import apply_model
 from demucs.audio import AudioFile, save_audio
 from demucs.pretrained import get_model
 from pydub import AudioSegment
 
 
-def deep_process_music(input_file_path, output_path):
+@shared_task(
+    bind=True,
+    autoretry_for=(Exception,),
+    retry_backoff=True,
+    retry_kwargs={"max_retries": 5},
+    name="music_processing:deep_process_music",
+)
+def deep_process_music(self, input_file_path: str, output_path: str):
     # limit the number of thread used by pytorch
-    torch.set_num_threads(1)
+    print("\n\n\n\n", input_file_path, output_path, "\n\n\n\n")
+    import torch
 
+    torch.set_num_threads(1)
     # get the model
     model = get_model(name="htdemucs")
     model.cpu()
@@ -37,25 +45,3 @@ def deep_process_music(input_file_path, output_path):
     audio = vocals.overlay(drums, position=0)
     # store the merged audio
     audio.export(f"{output_path}/merged.wav", format="wav")
-
-
-connection = pika.BlockingConnection(pika.ConnectionParameters(host="localhost"))
-channel = connection.channel()
-
-channel.queue_declare(queue="task_queue", durable=True)
-print(" [*] Waiting for messages. To exit press CTRL+C")
-
-
-def process_callback(ch, method, properties, body):
-    print(" [x] Received %r. Processing..." % (body.decode()))
-    deep_process_music(
-        "/tmp/distributed-music-editor/originals/" + body.decode() + ".mp3", "/tmp/distributed-music-editor/processed/" + body.decode()
-    )
-    print(" [x] Done")
-    ch.basic_ack(delivery_tag=method.delivery_tag)
-
-
-channel.basic_qos(prefetch_count=1)
-channel.basic_consume(queue="task_queue", on_message_callback=process_callback)
-
-channel.start_consuming()
