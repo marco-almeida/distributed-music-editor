@@ -37,7 +37,6 @@ def main(args):
     # apply the model
     sources = apply_model(model, wav[None], device="cpu", progress=True, num_workers=1)[0]
     sources = sources * ref.std() + ref.mean()
-    print(sources)
 
     # store the model
     for source, name in zip(sources, model.sources):

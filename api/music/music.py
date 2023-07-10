@@ -1,9 +1,13 @@
-import os
-from typing import List
-from fastapi import APIRouter, HTTPException, Request, BackgroundTasks
-from fastapi.responses import Response
-from .utils import get_music_id, get_track_id, deep_process_music
 import asyncio
+import multiprocessing
+import os
+import threading
+from typing import List
+
+from fastapi import APIRouter, BackgroundTasks, HTTPException, Request
+from fastapi.responses import Response
+
+from .utils import deep_process_music, get_music_id, get_track_id
 
 music = {}
 router = APIRouter()
@@ -53,13 +57,14 @@ async def process_music(music_id: int, tracks: List[int], background_tasks: Back
         raise HTTPException(status_code=404, detail="Music not found")
     if any(track_id not in [x["track_id"] for x in music[music_id]["tracks"]] for track_id in tracks):
         raise HTTPException(status_code=405, detail="Track not found")
-    
+
     # create folder to store processed music
     dir_path = ROOT + f"/processed/{music_id}"
     if not os.path.exists(dir_path):
         os.makedirs(dir_path)
 
-    # background_tasks.add_task(process_music_background, music_id)
-    deep_process_music(f"{ROOT}/originals/{music_id}.mp3", dir_path)
-
+    # background_tasks.add_task(deep_process_music, f"{ROOT}/originals/{music_id}.mp3", dir_path)
+    # deep_process_music(f"{ROOT}/originals/{music_id}.mp3", dir_path)
+    # threading.Thread(target=deep_process_music, args=(f"{ROOT}/originals/{music_id}.mp3", dir_path), daemon=True).start()
+    # use multiprocessing
     return Response(status_code=200)
