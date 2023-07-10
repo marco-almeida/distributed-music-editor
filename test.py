@@ -99,13 +99,12 @@ def main(args):
         logger.error("Error: GET /music")
 
     # POST /music/{id}
-    r = requests.post(f"{args.u}/music/{eval_music_id}", json=[1, 2], headers={"Content-Type": "application/json"}, timeout=args.t)
+    r = requests.post(f"{args.u}/music/{eval_music_id}", json=[5, 6], headers={"Content-Type": "application/json"}, timeout=args.t)
 
     if r.ok:
-        json_response = r.json()
         logger.info(f"{json_response}")
     else:
-        logger.error("Error: GET /music/{eval_music_id}")
+        logger.error("Error: POST /music/{eval_music_id}")
 
     # GET /music/{id}
     done = False
