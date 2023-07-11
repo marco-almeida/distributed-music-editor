@@ -54,7 +54,7 @@ async def submit_music(request: Request):
 
 @router.get("/")
 async def list_all_music() -> List[dict]:
-    return [x for x in music.values()]
+    return [{"music_id": x["music_id"], "tracks": x["tracks"]} for x in music.values()]
 
 
 @router.post("/{music_id}")
@@ -87,13 +87,16 @@ async def get_music_progress(music_id: int):
     if music_id not in music:
         raise HTTPException(status_code=404, detail="Music not found")
 
+    if music_id not in jobs:
+        return {"progress": 0}
+
     job = jobs[music_id]
     ts = time.time() - music[music_id]["start_time"]
     task_info = get_task_info(job["job_id"])
     total_time = task_info["task_result"] if task_info["task_status"] == "SUCCESS" else -1
     elapsed_time = total_time if total_time != -1 else ts
 
-    jobs[music_id]["time"] = int(elapsed_time * 1000) # to ms
+    jobs[music_id]["time"] = int(elapsed_time * 1000)  # to ms
 
     # determine progress
     progress = int(elapsed_time * BYTES_PER_SEC / jobs[music_id]["size"] * 100)
