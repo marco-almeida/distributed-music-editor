@@ -1,4 +1,7 @@
+from time import time
+
 from celery import shared_task
+from celery.signals import task_postrun, task_prerun
 from demucs.apply import apply_model
 from demucs.audio import AudioFile, save_audio
 from demucs.pretrained import get_model
@@ -14,10 +17,10 @@ from pydub import AudioSegment
 )
 def deep_process_music(self, input_file_path: str, output_path: str):
     # limit the number of thread used by pytorch
-    print("\n\n\n\n", input_file_path, output_path, "\n\n\n\n")
     import torch
 
     torch.set_num_threads(1)
+    start_time = time()
     # get the model
     model = get_model(name="htdemucs")
     model.cpu()
@@ -45,3 +48,4 @@ def deep_process_music(self, input_file_path: str, output_path: str):
     audio = vocals.overlay(drums, position=0)
     # store the merged audio
     audio.export(f"{output_path}/merged.wav", format="wav")
+    return time() - start_time

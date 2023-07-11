@@ -1,4 +1,5 @@
 import os
+import time
 from typing import List
 
 import pika
@@ -9,27 +10,13 @@ from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import Response
 from starlette.responses import JSONResponse
 
+from .utils_id import get_music_id, get_track_id
+
 router = APIRouter(prefix="/music", tags=["music"])
-music_counter = 0
-track_counter = 0
-
-
-def get_music_id():
-    global music_counter
-    ctr = music_counter
-    music_counter = music_counter + 1
-    return ctr
-
-
-def get_track_id():
-    global track_counter
-    ctr = track_counter
-    track_counter = track_counter + 1
-    return ctr
-
-
-music = {}
+music = {}  # music_id to metadata (tracks id...)
+jobs = {}  # music_id to celery task id
 ROOT = "/tmp/distributed-music-editor"
+BYTES_PER_SEC = 5300
 
 
 @router.post("/")
@@ -59,9 +46,10 @@ async def submit_music(request: Request):
             {"name": "vocals", "track_id": get_track_id()},
             {"name": "other", "track_id": get_track_id()},
         ],
+        "size": len(body),
     }
 
-    return music[music_id]
+    return {"music_id": music_id, "tracks": music[music_id]["tracks"]}
 
 
 @router.get("/")
@@ -83,14 +71,14 @@ async def process_music(music_id: int, tracks: List[int]):
         os.makedirs(dir_path)
 
     input_file = f"{ROOT}/originals/{music_id}.mp3"
-    task = deep_process_music.apply_async(
+    task_id = deep_process_music.apply_async(
         args=(
             input_file,
             dir_path,
         )
     )
-
-    print("dewin it", hash(task.id), task.status)
+    music[music_id]["start_time"] = time.time()
+    jobs[music_id] = {"job_id": task_id, "size": music[music_id]["size"], "music_id": music_id, "tracks": tracks, "time": 0}
     return Response(status_code=200)
 
 
@@ -99,32 +87,18 @@ async def get_music_progress(music_id: int):
     if music_id not in music:
         raise HTTPException(status_code=404, detail="Music not found")
 
-    return {"progress": 21}
+    job = jobs[music_id]
+    ts = time.time() - music[music_id]["start_time"]
+    task_info = get_task_info(job["job_id"])
+    total_time = task_info["task_result"] if task_info["task_status"] == "SUCCESS" else -1
+    elapsed_time = total_time if total_time != -1 else ts
 
+    jobs[music_id]["time"] = int(elapsed_time * 1000) # to ms
 
-@router.get("/task/{task_id}")
-async def get_task_status(task_id: str) -> dict:
-    """
-    Return the status of the submitted Task
-    """
-    return get_task_info(task_id)
+    # determine progress
+    progress = int(elapsed_time * BYTES_PER_SEC / jobs[music_id]["size"] * 100)
+    if progress >= 100:
+        progress = 99
+    progress = 100 if total_time != -1 else progress
 
-
-# @router.post("/parallel")
-# async def get_universities_parallel(country: Country) -> dict:
-#     """
-#     Return the List of universities for the countries for e.g ["turkey","india","australia"] provided
-#     in input in a sync way. This will use Celery to perform the subtasks in a parallel manner
-#     """
-
-#     data: dict = {}
-#     tasks = []
-#     for cnt in country.countries:
-#         tasks.append(get_university_task.s(cnt))
-#     # create a group with all the tasks
-#     job = group(tasks)
-#     result = job.apply_async()
-#     ret_values = result.get(disable_sync_subtasks=False)
-#     for result in ret_values:
-#         data.update(result)
-#     return data
+    return {"progress": progress}

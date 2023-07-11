@@ -15,7 +15,7 @@ class BaseConfig:
     CELERY_BROKER_URL: str = os.environ.get("CELERY_BROKER_URL", "amqp://guest:guest@localhost:5672//")
     CELERY_RESULT_BACKEND: str = os.environ.get("CELERY_RESULT_BACKEND", "rpc://")
 
-    CELERY_TASK_QUEUES: list = (
+    CELERY_TASK_QUEUES = (
         # default queue
         Queue("celery"),
         # custom queue
