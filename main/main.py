@@ -2,7 +2,7 @@ import logging
 import os
 import sys
 
-from config.celery_utils import create_celery
+# from config.celery_utils import create_celery
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from routers import music
@@ -19,7 +19,7 @@ logging.basicConfig(
 logger = logging.getLogger().getChild("System")
 
 app = FastAPI(title="Distributed Music Editor - Advanced Sound Systems", description="A distributed music editor", version="0.1.0")
-app.celery_app = create_celery()
+# app.celery_app = create_celery()
 # CORS
 app.add_middleware(
     CORSMiddleware,
@@ -30,6 +30,6 @@ app.add_middleware(
 )
 
 app.include_router(music.router)
-celery = app.celery_app
+# celery = app.celery_app
 
 logger.info(f"Available endpoints: {[x.path for x in app.routes]}")

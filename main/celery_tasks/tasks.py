@@ -2,26 +2,21 @@ import os
 from time import time
 from typing import List
 
-from celery import shared_task
+# limit the number of thread used by pytorch
+import torch
+from celery import Celery
 from demucs.apply import apply_model
 from demucs.audio import AudioFile, save_audio
 from demucs.pretrained import get_model
 from pydub import AudioSegment
 
+torch.set_num_threads(1)
+app = Celery("celery_tasks.tasks", broker="pyamqp://guest@localhost//")
 
-@shared_task(
-    bind=True,
-    autoretry_for=(Exception,),
-    retry_backoff=True,
-    retry_kwargs={"max_retries": 5},
-    name="music_processing:deep_process_music",
-)
-def deep_process_music(self, music_id: int, tracks: List[str]):
+
+@app.task
+def deep_process_music(music_id: int, tracks: List[str]):
     start_time = time()
-    # limit the number of thread used by pytorch
-    import torch
-
-    torch.set_num_threads(1)
 
     ROOT = "/tmp/distributed-music-editor"
     original_file = f"{ROOT}/originals/{music_id}.mp3"

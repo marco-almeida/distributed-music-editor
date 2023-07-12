@@ -2,15 +2,12 @@ import os
 import time
 from typing import List
 
-import pika
-from celery import group
-from celery_tasks.tasks import deep_process_music
-from config.celery_utils import get_task_info
 from fastapi import APIRouter, HTTPException, Request
-from fastapi.responses import Response
-from starlette.responses import JSONResponse
+from fastapi.responses import FileResponse, Response
 
-from .utils_id import get_music_id, get_track_id
+from celery_tasks.tasks import deep_process_music
+
+from .utils import delete_folder, get_music_id, get_track_id, split_mp3
 
 router = APIRouter(prefix="/music", tags=["music"])
 music = {}  # music_id to metadata (tracks id...)
@@ -68,14 +65,19 @@ async def process_music(music_id: int, tracks: List[int]):
     # track id to name
     tracks_str = [x["name"] for x in music[music_id]["tracks"] if x["track_id"] in tracks]
 
-    task_id = deep_process_music.apply_async(
-        args=(
-            music_id,
-            tracks_str,
-        )
-    )
-    music[music_id]["start_time"] = time.time()
-    jobs[music_id] = {"job_id": task_id, "size": music[music_id]["size"], "music_id": music_id, "tracks": tracks, "time": 0}
+    # split music in chunks and for each chunk create a job
+    chunks = split_mp3(f"{ROOT}/originals/{music_id}.mp3", 5 * 1000)  # 5 second chunks
+    # if folder exists, purge everything inside
+    delete_folder(f"{ROOT}/chunks/{music_id}")
+    os.makedirs(f"{ROOT}/chunks/{music_id}")
+    for idx, chunk in enumerate(chunks):
+        chunk.export(f"{ROOT}/chunks/{music_id}/{idx}.mp3", format="mp3")
+        
+    task_id = deep_process_music.delay(music_id, tracks_str)
+    ts = time.time()
+    print(task_id, "\n\n\n\n")
+    music[music_id]["start_time"] = ts
+    jobs[music_id] = {"job_id": task_id, "size": music[music_id]["size"], "music_id": music_id, "tracks": tracks, "time": int(ts)}
     return Response(status_code=200)
 
 
@@ -89,8 +91,9 @@ async def get_music_progress(music_id: int):
 
     job = jobs[music_id]
     ts = time.time() - music[music_id]["start_time"]
-    task_info = get_task_info(job["job_id"])
-    total_time = task_info["task_result"] if task_info["task_status"] == "SUCCESS" else -1
+    # task_info = get_task_info(job["job_id"])
+    # total_time = task_info["task_result"] if task_info["task_status"] == "SUCCESS" else -1
+    total_time = -1
     elapsed_time = total_time if total_time != -1 else ts
 
     jobs[music_id]["time"] = int(elapsed_time * 1000)  # to ms
@@ -102,3 +105,9 @@ async def get_music_progress(music_id: int):
     progress = 100 if total_time != -1 else progress
 
     return {"progress": progress}
+
+
+# TODO, ta music/file/id, trocar dps
+@router.get("/file/{file_id}")
+async def download_music(file_id: int):
+    return FileResponse(path=f"/tmp/distributed-music-editor/processed/{file_id}", filename=f"/{file_id}", media_type="text/wav")
