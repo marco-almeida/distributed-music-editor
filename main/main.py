@@ -1,25 +1,40 @@
 import logging
 import os
 import sys
+from contextlib import asynccontextmanager
 
-# from config.celery_utils import create_celery
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from routers import music
 
-# needed to make absolute imports work
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from routers import music
+from routers.utils import delete_folder
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # before start up
+    try:
+        delete_folder("/tmp/distributed-music-editor")
+        os.makedirs("/tmp/distributed-music-editor", exist_ok=True)
+    except Exception as e:
+        logger.error(e)
+    yield
+    try:
+        delete_folder("/tmp/distributed-music-editor")
+    except Exception as e:
+        logger.error(e)
+
 
 logging.basicConfig(
-    level=logging.DEBUG,
     format="%(asctime)s,%(msecs)03d: %(module)17s->%(funcName)-15s - [%(levelname)7s] - %(message)s",
     handlers=[logging.StreamHandler(stream=sys.stdout)],
 )
 
 logger = logging.getLogger().getChild("System")
 
-app = FastAPI(title="Distributed Music Editor - Advanced Sound Systems", description="A distributed music editor", version="0.1.0")
-# app.celery_app = create_celery()
+app = FastAPI(
+    title="Distributed Music Editor - Advanced Sound Systems", description="A distributed music editor", version="1.0.0", lifespan=lifespan
+)
 # CORS
 app.add_middleware(
     CORSMiddleware,
@@ -30,6 +45,5 @@ app.add_middleware(
 )
 
 app.include_router(music.router)
-# celery = app.celery_app
 
 logger.info(f"Available endpoints: {[x.path for x in app.routes]}")

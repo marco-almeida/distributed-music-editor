@@ -5,9 +5,9 @@ from typing import List
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import FileResponse, Response
 
-from celery_tasks.tasks import deep_process_music
+from celery_tasks.tasks import deep_process_music, dispatch_process_music
 
-from .utils import delete_folder, get_music_id, get_track_id, split_mp3
+from .utils import get_music_id, get_track_id
 
 router = APIRouter(prefix="/music", tags=["music"])
 music = {}  # music_id to metadata (tracks id...)
@@ -65,17 +65,10 @@ async def process_music(music_id: int, tracks: List[int]):
     # track id to name
     tracks_str = [x["name"] for x in music[music_id]["tracks"] if x["track_id"] in tracks]
 
-    # split music in chunks and for each chunk create a job
-    chunks = split_mp3(f"{ROOT}/originals/{music_id}.mp3", 5 * 1000)  # 5 second chunks
-    # if folder exists, purge everything inside
-    delete_folder(f"{ROOT}/chunks/{music_id}")
-    os.makedirs(f"{ROOT}/chunks/{music_id}")
-    for idx, chunk in enumerate(chunks):
-        chunk.export(f"{ROOT}/chunks/{music_id}/{idx}.mp3", format="mp3")
-        
-    task_id = deep_process_music.delay(music_id, tracks_str)
+    task_id = dispatch_process_music.delay(music_id, tracks_str, 3 * 1000)
+    # for each chunk, process it with celery
+    # task_id = deep_process_music.delay(music_id, tracks_str)
     ts = time.time()
-    print(task_id, "\n\n\n\n")
     music[music_id]["start_time"] = ts
     jobs[music_id] = {"job_id": task_id, "size": music[music_id]["size"], "music_id": music_id, "tracks": tracks, "time": int(ts)}
     return Response(status_code=200)
