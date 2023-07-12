@@ -65,16 +65,13 @@ async def process_music(music_id: int, tracks: List[int]):
     if any(track_id not in [x["track_id"] for x in music[music_id]["tracks"]] for track_id in tracks):
         raise HTTPException(status_code=405, detail="Track not found")
 
-    # create folder to store processed music
-    dir_path = ROOT + f"/processed/{music_id}"
-    if not os.path.exists(dir_path):
-        os.makedirs(dir_path)
+    # track id to name
+    tracks_str = [x["name"] for x in music[music_id]["tracks"] if x["track_id"] in tracks]
 
-    input_file = f"{ROOT}/originals/{music_id}.mp3"
     task_id = deep_process_music.apply_async(
         args=(
-            input_file,
-            dir_path,
+            music_id,
+            tracks_str,
         )
     )
     music[music_id]["start_time"] = time.time()
