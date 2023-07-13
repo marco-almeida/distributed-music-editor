@@ -8,6 +8,7 @@ from demucs.apply import apply_model
 from demucs.audio import AudioFile, save_audio
 from demucs.pretrained import get_model
 from pydub import AudioSegment
+from pydub.utils import make_chunks
 
 from routers.utils import delete_folder
 
@@ -16,19 +17,40 @@ app = Celery("celery_tasks.tasks", backend="redis://localhost", broker="pyamqp:/
 
 
 @app.task
-def merge_chunks(*task_ids: List[str]):
-    print(f"Ready to do something with {task_ids}")
+def merge_chunks(ignore, *stuff):
+    music_id: int = stuff[0]
+    tracks: List[str] = stuff[1]
+
+    chunked_channels = {"bass": [], "drum": [], "othe": [], "voca": []}
+    ROOT = "/tmp/distributed-music-editor"
+    for channel in os.listdir(f"{ROOT}/pre_processing/{music_id}"):
+        chunked_channels[channel[0:4]].append(f"{ROOT}/pre_processing/{music_id}/{channel}")
+
+    # for each channel, load all chunks into memory and append them
+    final = {"bass": AudioSegment.empty(), "drums": AudioSegment.empty(), "other": AudioSegment.empty(), "vocals": AudioSegment.empty()}
+
+    delete_folder(f"{ROOT}/processed/{music_id}")
+    os.makedirs(f"{ROOT}/processed/{music_id}")
+    for channel in final.keys():
+        # for each list, sort it alphanumerically
+        chunked_channels[channel[0:4]].sort()
+        # for each channel, append the chunks
+        for chunk in chunked_channels[channel[0:4]]:
+            # load to memory and append
+            final[channel] += AudioSegment.from_wav(chunk)
+        file_name = hash(f"{music_id}|{channel}")
+        final[channel].export(f"{ROOT}/processed/{music_id}/{channel}.wav", format="wav")
+
+    # export final track according to user's choice
+    mix_tracks(f"{ROOT}/processed/{music_id}", tracks)
 
 
 @app.task
 def dispatch_process_music(music_id: int, tracks: List[str], chunk_length: int):
     ROOT = "/tmp/distributed-music-editor"
-    split_mp3(f"{ROOT}/originals/{music_id}.mp3", f"{ROOT}/chunks/{music_id}", chunk_length)
+    splice_music(f"{ROOT}/originals/{music_id}.mp3", f"{ROOT}/chunks/{music_id}", chunk_length)
 
-    try:
-        delete_folder(f"{ROOT}/pre_processing/{music_id}")
-    except:
-        pass
+    delete_folder(f"{ROOT}/pre_processing/{music_id}")
     os.makedirs(f"{ROOT}/pre_processing/{music_id}")
 
     task_ids = []
@@ -37,9 +59,11 @@ def dispatch_process_music(music_id: int, tracks: List[str], chunk_length: int):
         task = process_chunks.s(f"{ROOT}/chunks/{music_id}/{chunk}", f"{ROOT}/pre_processing/{music_id}", idx)
         task_ids.append(task)
 
-    callback_task = merge_chunks.s(task_ids)
+    print(f"aqui tenho {music_id} e {tracks}")
+    callback_task = merge_chunks.s(music_id, tracks)
 
     chord(task_ids)(callback_task)
+    return task_ids
 
 
 @app.task
@@ -100,15 +124,11 @@ def mix_tracks(input_dir: str, tracks: List[str]):
     track.export(f"{input_dir}/final.wav", format="wav")
 
 
-def split_mp3(input_file, output_folder, chunk_length):
-    audio = AudioSegment.from_file(input_file, format="mp3")
-    total_duration = len(audio)
-    num_chunks = total_duration // chunk_length
+def splice_music(input_file, output_folder, chunk_length):
+    audio_segment = AudioSegment.from_file(input_file)
+    chunks = make_chunks(audio_segment, chunk_length)
+
     delete_folder(output_folder)
     os.makedirs(output_folder)
-
-    for i in range(num_chunks):
-        audio[i * chunk_length : (i + 1) * chunk_length].export(f"{output_folder}/{i}.mp3", format="mp3")
-
-    if total_duration % chunk_length != 0:
-        audio[num_chunks * chunk_length :].export(f"{output_folder}/{num_chunks}.mp3", format="mp3")
+    for i in range(len(chunks)):
+        chunks[i].export(f"{output_folder}/{i}.mp3", format="mp3")

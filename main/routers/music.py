@@ -5,7 +5,7 @@ from typing import List
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import FileResponse, Response
 
-from celery_tasks.tasks import deep_process_music, dispatch_process_music
+from celery_tasks.tasks import dispatch_process_music
 
 from .utils import get_music_id, get_track_id
 
@@ -65,9 +65,11 @@ async def process_music(music_id: int, tracks: List[int]):
     # track id to name
     tracks_str = [x["name"] for x in music[music_id]["tracks"] if x["track_id"] in tracks]
 
+    # dispatch processing which will divide music into chunks and process each chunk in parallel
     task_id = dispatch_process_music.delay(music_id, tracks_str, 3 * 1000)
-    # for each chunk, process it with celery
-    # task_id = deep_process_music.delay(music_id, tracks_str)
+    # pegar neste task obj, guardar num dict
+    # para ver progresso depois é ver os jobs que este obj criou, ver o task.result
+    # se for None é 0. depois é ver para quantos jobs existentes, ver o task.result de cada um
     ts = time.time()
     music[music_id]["start_time"] = ts
     jobs[music_id] = {"job_id": task_id, "size": music[music_id]["size"], "music_id": music_id, "tracks": tracks, "time": int(ts)}

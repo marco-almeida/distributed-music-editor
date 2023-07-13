@@ -13,16 +13,10 @@ from routers.utils import delete_folder
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # before start up
-    try:
-        delete_folder("/tmp/distributed-music-editor")
-        os.makedirs("/tmp/distributed-music-editor", exist_ok=True)
-    except Exception as e:
-        logger.error(e)
+    delete_folder("/tmp/distributed-music-editor")
+    os.makedirs("/tmp/distributed-music-editor", exist_ok=True)
     yield
-    try:
-        delete_folder("/tmp/distributed-music-editor")
-    except Exception as e:
-        logger.error(e)
+    delete_folder("/tmp/distributed-music-editor")
 
 
 logging.basicConfig(
