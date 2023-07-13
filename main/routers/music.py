@@ -1,9 +1,11 @@
+import ctypes
 import os
 import time
 from typing import List
 
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import FileResponse, Response
+from celery.result import AsyncResult
 
 from celery_tasks.tasks import dispatch_process_music
 
@@ -66,13 +68,12 @@ async def process_music(music_id: int, tracks: List[int]):
     tracks_str = [x["name"] for x in music[music_id]["tracks"] if x["track_id"] in tracks]
 
     # dispatch processing which will divide music into chunks and process each chunk in parallel
-    task_id = dispatch_process_music.delay(music_id, tracks_str, 3 * 1000)
-    # pegar neste task obj, guardar num dict
-    # para ver progresso depois é ver os jobs que este obj criou, ver o task.result
-    # se for None é 0. depois é ver para quantos jobs existentes, ver o task.result de cada um
+    task = dispatch_process_music.delay(music_id, tracks_str, 3 * 1000)
+    print(task)
+    print(type(task))
     ts = time.time()
     music[music_id]["start_time"] = ts
-    jobs[music_id] = {"job_id": task_id, "size": music[music_id]["size"], "music_id": music_id, "tracks": tracks, "time": int(ts)}
+    jobs[music_id] = {"job_id": task.id, "size": music[music_id]["size"], "music_id": music_id, "tracks": tracks, "time": int(ts)}
     return Response(status_code=200)
 
 
@@ -84,7 +85,18 @@ async def get_music_progress(music_id: int):
     if music_id not in jobs:
         return {"progress": 0}
 
+    file_hash_func = lambda x: ctypes.c_size_t(hash(f"{music_id}|{x}")).value
+
     job = jobs[music_id]
+    job_id = job["job_id"]
+    print(job)
+    print(type(job))
+    print(job_id)
+    print(type(job_id))
+    job_obj = AsyncResult(job_id)
+    print(type(job_obj))
+    print(job_obj.result)
+    print(job_obj.state)
     ts = time.time() - music[music_id]["start_time"]
     # task_info = get_task_info(job["job_id"])
     # total_time = task_info["task_result"] if task_info["task_status"] == "SUCCESS" else -1
@@ -103,6 +115,6 @@ async def get_music_progress(music_id: int):
 
 
 # TODO, ta music/file/id, trocar dps
-@router.get("/file/{file_id}")
-async def download_music(file_id: int):
-    return FileResponse(path=f"/tmp/distributed-music-editor/processed/{file_id}", filename=f"/{file_id}", media_type="text/wav")
+# @router.get("/file/{file_id}")
+# async def download_music(file_id: int):
+#     return FileResponse(path=f"/tmp/distributed-music-editor/processed/{file_id}", filename=f"/{file_id}", media_type="text/wav")

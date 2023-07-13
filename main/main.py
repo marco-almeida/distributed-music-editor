@@ -15,8 +15,12 @@ async def lifespan(app: FastAPI):
     # before start up
     delete_folder("/tmp/distributed-music-editor")
     os.makedirs("/tmp/distributed-music-editor", exist_ok=True)
+    # if processed folder doesnt exist, create it
+    delete_folder("/tmp/distributed-music-editor/processed")
+    os.makedirs("/tmp/distributed-music-editor/processed", exist_ok=True)
     yield
     delete_folder("/tmp/distributed-music-editor")
+    delete_folder("/tmp/distributed-music-editor/processed")
 
 
 logging.basicConfig(
@@ -40,4 +44,6 @@ app.add_middleware(
 
 app.include_router(music.router)
 
+
 logger.info(f"Available endpoints: {[x.path for x in app.routes]}")
+
