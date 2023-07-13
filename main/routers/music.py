@@ -1,11 +1,12 @@
 import ctypes
+import hashlib
 import os
 import time
 from typing import List
 
+from celery.result import AsyncResult
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import FileResponse, Response
-from celery.result import AsyncResult
 
 from celery_tasks.tasks import dispatch_process_music
 
@@ -69,12 +70,14 @@ async def process_music(music_id: int, tracks: List[int]):
 
     # dispatch processing which will divide music into chunks and process each chunk in parallel
     task = dispatch_process_music.delay(music_id, tracks_str, 3 * 1000)
-    print(task)
-    print(type(task))
+
     ts = time.time()
     music[music_id]["start_time"] = ts
     jobs[music_id] = {"job_id": task.id, "size": music[music_id]["size"], "music_id": music_id, "tracks": tracks, "time": int(ts)}
     return Response(status_code=200)
+
+
+from celery.result import GroupResult
 
 
 @router.get("/{music_id}")
@@ -85,33 +88,25 @@ async def get_music_progress(music_id: int):
     if music_id not in jobs:
         return {"progress": 0}
 
-    file_hash_func = lambda x: ctypes.c_size_t(hash(f"{music_id}|{x}")).value
-
     job = jobs[music_id]
     job_id = job["job_id"]
-    print(job)
-    print(type(job))
-    print(job_id)
-    print(type(job_id))
     job_obj = AsyncResult(job_id)
-    print(type(job_obj))
-    print(job_obj.result)
-    print(job_obj.state)
-    ts = time.time() - music[music_id]["start_time"]
-    # task_info = get_task_info(job["job_id"])
-    # total_time = task_info["task_result"] if task_info["task_status"] == "SUCCESS" else -1
-    total_time = -1
-    elapsed_time = total_time if total_time != -1 else ts
-
-    jobs[music_id]["time"] = int(elapsed_time * 1000)  # to ms
-
-    # determine progress
-    progress = int(elapsed_time * BYTES_PER_SEC / jobs[music_id]["size"] * 100)
-    if progress >= 100:
-        progress = 99
-    progress = 100 if total_time != -1 else progress
-
-    return {"progress": progress}
+    children: GroupResult = job_obj.children
+    try:
+        children_tasks = [y for x in children for y in x]
+    except:
+        return {"progress": 0}
+    # progress is the number of processed tasks / total tasks
+    progress = len([task for task in children_tasks if task.status == "SUCCESS"]) / len(children_tasks) * 100
+    msg = {"progress": int(progress)}
+    if progress == 100:
+        msg["instruments"] = []
+        for track in music[music_id]["tracks"]:
+            channel_name = track["name"]
+            name_to_be_hashed = f"{music_id}|{channel_name}".encode()
+            file_name = int(hashlib.md5(name_to_be_hashed).hexdigest(), 16)
+            msg["instruments"].append({"name": channel_name, "track": f"http://localhost:8000/file/{file_name}"})
+    return msg
 
 
 # TODO, ta music/file/id, trocar dps

@@ -1,11 +1,10 @@
 import ctypes
+import hashlib
 import os
-from time import time
 from typing import List
 
 import torch
 from celery import Celery, chord
-from celery.result import AsyncResult
 from demucs.apply import apply_model
 from demucs.audio import AudioFile, save_audio
 from demucs.pretrained import get_model
@@ -39,7 +38,8 @@ def merge_chunks(ignore, *stuff):
         for chunk in chunked_channels[channel[0:4]]:
             # load to memory and append
             final[channel] += AudioSegment.from_wav(chunk)
-        file_name = ctypes.c_size_t(hash(f"{music_id}|{channel}")).value
+        name_to_be_hashed = f"{music_id}|{channel}".encode()
+        file_name = int(hashlib.md5(name_to_be_hashed).hexdigest(), 16)
         final[channel].export(f"{ROOT}/processed/{file_name}.wav", format="wav")
         final[channel] = file_name
 
@@ -56,19 +56,15 @@ def dispatch_process_music(music_id: int, tracks: List[str], chunk_length: int):
     delete_folder(f"{ROOT}/pre_processing/{music_id}")
     os.makedirs(f"{ROOT}/pre_processing/{music_id}")
 
-    task_ids = []
+    task_sigs = []
 
     for idx, chunk in enumerate(os.listdir(f"{ROOT}/chunks/{music_id}")):
         task = process_chunks.s(f"{ROOT}/chunks/{music_id}/{chunk}", f"{ROOT}/pre_processing/{music_id}", idx)
-        task_ids.append(task)
+        task_sigs.append(task)
 
-    print(f"aqui tenho {music_id} e {tracks}")
     callback_task = merge_chunks.s(music_id, tracks)
 
-    bababooey = chord(task_ids)(callback_task)
-    print(bababooey)
-    print(type(bababooey))
-    return task_ids
+    chord(task_sigs)(callback_task)
 
 
 @app.task
