@@ -1,4 +1,3 @@
-import ctypes
 import hashlib
 import os
 import time
@@ -6,7 +5,7 @@ from typing import List
 
 from celery.result import AsyncResult
 from fastapi import APIRouter, HTTPException, Request
-from fastapi.responses import FileResponse, Response
+from fastapi.responses import Response
 
 from celery_tasks.tasks import dispatch_process_music
 
@@ -16,7 +15,6 @@ router = APIRouter(prefix="/music", tags=["music"])
 music = {}  # music_id to metadata (tracks id...)
 jobs = {}  # music_id to celery task id
 ROOT = "/tmp/distributed-music-editor"
-BYTES_PER_SEC = 5300
 
 
 @router.post("/")
@@ -106,10 +104,8 @@ async def get_music_progress(music_id: int):
             name_to_be_hashed = f"{music_id}|{channel_name}".encode()
             file_name = int(hashlib.md5(name_to_be_hashed).hexdigest(), 16)
             msg["instruments"].append({"name": channel_name, "track": f"http://localhost:8000/file/{file_name}"})
+        name_to_be_hashed = f"{music_id}|final".encode()
+        file_name = int(hashlib.md5(name_to_be_hashed).hexdigest(), 16)
+        msg["final"] = f"http://localhost:8000/file/{file_name}"
+        print(f"Final track: {file_name}. obtained from {name_to_be_hashed}")
     return msg
-
-
-# TODO, ta music/file/id, trocar dps
-# @router.get("/file/{file_id}")
-# async def download_music(file_id: int):
-#     return FileResponse(path=f"/tmp/distributed-music-editor/processed/{file_id}", filename=f"/{file_id}", media_type="text/wav")

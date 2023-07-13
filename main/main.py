@@ -6,7 +6,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from routers import music
+from routers import music, system
 from routers.utils import delete_folder
 
 
@@ -43,7 +43,7 @@ app.add_middleware(
 )
 
 app.include_router(music.router)
-
+app.include_router(system.router)
 
 logger.info(f"Available endpoints: {[x.path for x in app.routes]}")
 

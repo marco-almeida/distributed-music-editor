@@ -1,4 +1,3 @@
-import ctypes
 import hashlib
 import os
 from typing import List
@@ -42,8 +41,6 @@ def merge_chunks(ignore, *stuff):
         file_name = int(hashlib.md5(name_to_be_hashed).hexdigest(), 16)
         final[channel].export(f"{ROOT}/processed/{file_name}.wav", format="wav")
         final[channel] = file_name
-
-    print(f"final: {final}")
 
     # export final track according to user's choice
     mix_tracks(music_id, final, tracks)
@@ -89,10 +86,11 @@ def mix_tracks(music_id: int, channel_to_hash: dict, tracks: List[str]):
     final = AudioSegment.from_wav(f"/tmp/distributed-music-editor/processed/{channel_to_hash[tracks[0]]}.wav")
     for idx in range(1, len(tracks)):
         final = final.overlay(AudioSegment.from_wav(f"/tmp/distributed-music-editor/processed/{channel_to_hash[tracks[idx]]}.wav"))
-    file_name = ctypes.c_size_t(hash(f"{music_id}|final")).value
+    name_to_be_hashed = f"{music_id}|final".encode()
+    file_name = int(hashlib.md5(name_to_be_hashed).hexdigest(), 16)
     final.export(f"/tmp/distributed-music-editor/processed/{file_name}.wav", format="wav")
 
-    print(ctypes.c_size_t(hash(f"{music_id}|final")).value)
+    print(f"Final track: {file_name}. obtained from {name_to_be_hashed}")
 
 
 def splice_music(input_file, output_folder, chunk_length):
