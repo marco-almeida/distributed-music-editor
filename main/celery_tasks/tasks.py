@@ -90,8 +90,6 @@ def mix_tracks(music_id: int, channel_to_hash: dict, tracks: List[str]):
     file_name = int(hashlib.md5(name_to_be_hashed).hexdigest(), 16)
     final.export(f"/tmp/distributed-music-editor/processed/{file_name}.wav", format="wav")
 
-    print(f"Final track: {file_name}. obtained from {name_to_be_hashed}")
-
 
 def splice_music(input_file, output_folder, chunk_length):
     audio_segment = AudioSegment.from_file(input_file)

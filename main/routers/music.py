@@ -14,6 +14,7 @@ from .utils import get_music_id, get_track_id
 router = APIRouter(prefix="/music", tags=["music"])
 music = {}  # music_id to metadata (tracks id...)
 jobs = {}  # music_id to celery task id
+job_info = {} # job id to job info
 ROOT = "/tmp/distributed-music-editor"
 
 
@@ -72,6 +73,7 @@ async def process_music(music_id: int, tracks: List[int]):
     ts = time.time()
     music[music_id]["start_time"] = ts
     jobs[music_id] = {"job_id": task.id, "size": music[music_id]["size"], "music_id": music_id, "tracks": tracks, "time": int(ts)}
+    job_info[task.id] = jobs[music_id]
     return Response(status_code=200)
 
 
@@ -107,5 +109,4 @@ async def get_music_progress(music_id: int):
         name_to_be_hashed = f"{music_id}|final".encode()
         file_name = int(hashlib.md5(name_to_be_hashed).hexdigest(), 16)
         msg["final"] = f"http://localhost:8000/file/{file_name}"
-        print(f"Final track: {file_name}. obtained from {name_to_be_hashed}")
     return msg

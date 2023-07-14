@@ -1,17 +1,19 @@
-import os
+from fastapi import APIRouter
 
-from fastapi import APIRouter, HTTPException
-from starlette.responses import FileResponse
-
-router = APIRouter()
+router = APIRouter(tags=["system"])
+from routers.music import job_info
 
 
-@router.get("/file/{file_id}")
-async def download_music(file_id: int):
-    filename = f"{file_id}.wav"
-    dir_path = f"/tmp/distributed-music-editor/processed/{filename}"
+@router.get("/job")
+async def list_all_jobs():
+    return [x for x in job_info]
 
-    if not os.path.exists(dir_path):
-        raise HTTPException(status_code=404, detail="File not found")
 
-    return FileResponse(path=dir_path, filename=filename, media_type="application/octet-stream")
+@router.get("/job/{job_id}")
+async def list_job(job_id: str):
+    return job_info[job_id]
+
+
+@router.post("/reset")
+async def reset(prefix="/"):
+    pass
