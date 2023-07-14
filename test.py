@@ -139,7 +139,7 @@ def main(args):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Split an audio track", formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument("-u", type=str, help="API URL", default="http://localhost:8000")
+    parser.add_argument("-u", type=str, help="API URL", default="http://localhost:7123")
     parser.add_argument("-t", type=int, help="Request Timeout", default=3)
     args = parser.parse_args()
 

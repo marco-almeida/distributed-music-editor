@@ -1,5 +1,4 @@
 import hashlib
-import os
 import time
 from io import BytesIO
 from typing import List
@@ -87,9 +86,6 @@ async def process_music(music_id: int, tracks: List[int]):
     return Response(status_code=200)
 
 
-from celery.result import GroupResult
-
-
 @router.get("/{music_id}")
 async def get_music_progress(music_id: int):
     if music_id not in music:
@@ -101,7 +97,7 @@ async def get_music_progress(music_id: int):
     job = jobs[music_id]
     job_id = job["job_id"]
     job_obj = AsyncResult(job_id)
-    children: GroupResult = job_obj.children
+    children = job_obj.children
     try:
         children_tasks = [y for x in children for y in x]
     except:
@@ -110,13 +106,15 @@ async def get_music_progress(music_id: int):
     progress = len([task for task in children_tasks if task.status == "SUCCESS"]) / len(children_tasks) * 100
     msg = {"progress": int(progress)}
     if progress == 100:
+        from config import settings
+
         msg["instruments"] = []
         for track in music[music_id]["tracks"]:
             channel_name = track["name"]
             name_to_be_hashed = f"{music_id}|{channel_name}".encode()
             file_name = int(hashlib.md5(name_to_be_hashed).hexdigest(), 16)
-            msg["instruments"].append({"name": channel_name, "track": f"http://localhost:8000/file/{file_name}"})
+            msg["instruments"].append({"name": channel_name, "track": f"http://{settings.ip}:{settings.port}/file/{file_name}"})
         name_to_be_hashed = f"{music_id}|final".encode()
         file_name = int(hashlib.md5(name_to_be_hashed).hexdigest(), 16)
-        msg["final"] = f"http://localhost:8000/file/{file_name}"
+        msg["final"] = f"http://{settings.ip}:{settings.port}/file/{file_name}"
     return msg

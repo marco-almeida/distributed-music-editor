@@ -3,3 +3,4 @@ uvicorn==0.22.0
 fastapi==0.100.0
 mutagen==1.46.0
 redis==4.6.0
+pydantic_settings==2.0.1

@@ -1,11 +1,16 @@
+import argparse
 import logging
 import os
 import sys
 from contextlib import asynccontextmanager
 
+# needed to make absolute imports work
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+import uvicorn
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
+
 from routers import music, system
 from routers.utils import delete_folder, make_dirs
 
@@ -58,3 +63,17 @@ async def download_music(file_id: int):
 
 
 logger.info(f"Available endpoints: {[x.path for x in app.routes]}")
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(
+        description="API for the Distributed Music Editor", formatter_class=argparse.ArgumentDefaultsHelpFormatter
+    )
+    parser.add_argument("-i", "--ip", type=str, help="API IP", default="127.0.0.1")
+    parser.add_argument("-p", "--port", type=int, help="API Port", default=7123)
+    args = parser.parse_args()
+    from src.config import settings
+
+    settings.ip = args.ip
+    settings.port = args.port
+
+    uvicorn.run("main:app", reload=True, host=args.ip, port=args.port)
