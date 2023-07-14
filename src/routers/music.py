@@ -19,7 +19,7 @@ jobs = {}  # music_id to celery task id
 job_info = {}  # job id to job info
 ROOT = "/tmp/distributed-music-editor"
 
-CHUNK_LENGTH = 5 * 1000  # 5 seconds
+CHUNK_LENGTH = 10 * 1_000  # 10 seconds
 
 
 @router.post("/")
@@ -98,11 +98,12 @@ async def get_music_progress(music_id: int):
     job = jobs[music_id]
     job_id = job["job_id"]
     job_obj = AsyncResult(job_id)
-    children = job_obj.children
-    try:
-        children_tasks = [y for x in children for y in x]
-    except:
+    children_ids = job_obj.result
+    if children_ids is None:
         return {"progress": 0}
+    else:
+        children_tasks = [AsyncResult(x) for x in children_ids]
+
     # progress is the number of processed tasks / total tasks
     progress = len([task for task in children_tasks if task.status == "SUCCESS"]) / len(children_tasks) * 100
     msg = {"progress": int(progress)}

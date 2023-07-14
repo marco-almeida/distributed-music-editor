@@ -1,5 +1,6 @@
 tracks
 pretrained_models
+test.py
 *.wav
 *.mp3
 .vscode

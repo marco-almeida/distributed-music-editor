@@ -1,9 +1,13 @@
-from fastapi import APIRouter
+from celery import Celery
+from fastapi import APIRouter, HTTPException
+from fastapi.responses import Response
 
-router = APIRouter(tags=["system"])
-from celery_tasks.tasks import app
 from routers.music import job_info, jobs, music
 from routers.utils import delete_folder, make_dirs
+
+router = APIRouter(tags=["system"])
+
+workers = Celery("celery_tasks.tasks", backend="redis://localhost", broker="pyamqp://guest@localhost//")
 
 
 @router.get("/job")
@@ -13,13 +17,15 @@ async def list_all_jobs():
 
 @router.get("/job/{job_id}")
 async def list_job(job_id: str):
+    if job_id not in job_info:
+        raise HTTPException(status_code=404, detail="Job not found")
     return job_info[job_id]
 
 
 @router.post("/reset")
 async def reset():
     # terminate all jobs
-    app.control.purge()
+    workers.control.purge()
 
     # reset data structures
     music.clear()
@@ -29,3 +35,4 @@ async def reset():
     # delete and create folders
     delete_folder("/tmp/distributed-music-editor")
     make_dirs("/tmp/distributed-music-editor/processed", "/tmp/distributed-music-editor/originals")
+    return Response(status_code=200)
