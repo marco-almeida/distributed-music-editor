@@ -9,6 +9,7 @@ from fastapi.responses import Response
 from mutagen.mp3 import MP3
 
 from celery_tasks.tasks import dispatch_process_music
+from config import settings
 
 from .utils import get_music_id, get_track_id
 
@@ -106,8 +107,6 @@ async def get_music_progress(music_id: int):
     progress = len([task for task in children_tasks if task.status == "SUCCESS"]) / len(children_tasks) * 100
     msg = {"progress": int(progress)}
     if progress == 100:
-        from config import settings
-
         msg["instruments"] = []
         for track in music[music_id]["tracks"]:
             channel_name = track["name"]

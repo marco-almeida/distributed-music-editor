@@ -1,7 +1,9 @@
 from fastapi import APIRouter
 
 router = APIRouter(tags=["system"])
-from routers.music import job_info
+from celery_tasks.tasks import app
+from routers.music import job_info, jobs, music
+from routers.utils import delete_folder, make_dirs
 
 
 @router.get("/job")
@@ -16,4 +18,14 @@ async def list_job(job_id: str):
 
 @router.post("/reset")
 async def reset():
-    pass
+    # terminate all jobs
+    app.control.purge()
+
+    # reset data structures
+    music.clear()
+    jobs.clear()
+    job_info.clear()
+
+    # delete and create folders
+    delete_folder("/tmp/distributed-music-editor")
+    make_dirs("/tmp/distributed-music-editor/processed", "/tmp/distributed-music-editor/originals")

@@ -4,16 +4,16 @@ from typing import List
 
 import torch
 from celery import Celery, chord
-from celery_tasks.utils import mix_tracks, splice_music
 from demucs.apply import apply_model
 from demucs.audio import AudioFile, save_audio
 from demucs.pretrained import get_model
 from pydub import AudioSegment
+
+from celery_tasks.utils import mix_tracks, splice_music
 from routers.utils import delete_folder, make_dirs
 
 torch.set_num_threads(1)
 app = Celery("celery_tasks.tasks", backend="redis://localhost", broker="pyamqp://guest@localhost//")
-
 ROOT = "/tmp/distributed-music-editor"
 
 

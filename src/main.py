@@ -4,8 +4,6 @@ import os
 import sys
 from contextlib import asynccontextmanager
 
-# needed to make absolute imports work
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import uvicorn
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -18,8 +16,8 @@ from routers.utils import delete_folder, make_dirs
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # before start up
-    delete_folder("/tmp/distributed-music-editor", "/tmp/distributed-music-editor/processed", "/tmp/distributed-music-editor/originals")
-    make_dirs("/tmp/distributed-music-editor", "/tmp/distributed-music-editor/processed", "/tmp/distributed-music-editor/originals")
+    delete_folder("/tmp/distributed-music-editor")
+    make_dirs("/tmp/distributed-music-editor/processed", "/tmp/distributed-music-editor/originals")
     yield
     # after shutdown
     delete_folder("/tmp/distributed-music-editor")
@@ -71,6 +69,7 @@ if __name__ == "__main__":
     parser.add_argument("-i", "--ip", type=str, help="API IP", default="127.0.0.1")
     parser.add_argument("-p", "--port", type=int, help="API Port", default=7123)
     args = parser.parse_args()
+    sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     from src.config import settings
 
     settings.ip = args.ip
