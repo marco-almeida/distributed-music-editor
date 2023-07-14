@@ -1,12 +1,35 @@
-# CD 2023 Project
+# Distributed Music Editor
 
-Here we have a sample code that loads one mp3 file and splits it 
-into 4 tracks: vocals, drums, bass and other.
+This project uses RabbitMQ, Redis, Celery and FastAPI to develop an API that allows to receive .mp3 files and split them into multiple tracks, e.g vocals, drums, bass, etc...
+
+All work is done asynchronously and as simultaneously as possible.
+
+RabbitMQ is used to distribute the work among multiple workers. Redis is used to store the results of the work and Celery is used to manage the workers. FastAPI is used to develop the API.
 
 The codes uses one library named [demucs](https://github.com/facebookresearch/demucs),
 this library uses a deep learning model to separate the tracks.
 This library requires [ffmpeg](https://ffmpeg.org/) to work.
 It should be present in most Linux distributions.
+
+Code snippet to split a track into multiple tracks provided by professors [mariolpantunes](https://github.com/mariolpantunes), [dgomes](https://github.com/dgomes) and [nunolau](https://github.com/nunolau)
+
+## Set Up
+
+### Set Up with Docker
+
+To run the project with docker, run the following commands:
+
+```bash
+cd redis
+docker compose up -d
+cd ../rabbitmq
+docker compose up -d
+cd ..
+docker build . -t dme-api
+docker compose up
+```
+
+### Set Up without Docker
 
 ## Dependencies
 
@@ -14,49 +37,28 @@ For Ubuntu (and other debian based linux), run the following commands:
 
 ```bash
 sudo apt install ffmpeg
+sudo apt install rabbitmq-server
+sudo apt install redis
 ```
 
 ## Setup
 
 Run the following commands to setup the environement:
-```bash
-mkdir tracks
 
+```bash
 python3 -m venv venv
 source venv/bin/activate
 
 pip install pip --upgrade
 pip install -r requirements_torch.txt
 pip install -r requirements_demucs.txt
+pip install -r requirements_api.txt
 ```
 
 It is important to install the requirements following the previous instructions.
 By default, PyTorch will install the CUDA version of the library (over 4G simple from the virtual environment).
 As such, the current instructions force the installation of the CPU version of PyTorch and then installs Demucs.
 
-## Usage
-
-The sample main code only requires two parameters:
-- **i** the mp3 file used for input
-- **o** the folder for the output
-
-Two audio tracks are given (download them from [here](https://filesender.fccn.pt/?s=download&token=cd4fcd29-b3f1-4a4d-9da3-50aae00e702d)):
-- **test.mp3** a short sample (0:34) that allows for a quick validation
-- **mudic.mp3** a long (59:04) sequence of royalty free rock musics that are the target of the work
-
-Both audio files are royalty free.
-
-To run test the sample code simple run:
-```bash
-python main.py -i test.mp3
-```
-
-## Authors
-
-* **Mário Antunes** - [mariolpantunes](https://github.com/mariolpantunes)
-* **Diogo Gomes** - [dgomes](https://github.com/dgomes)
-* **Nuno Lau** - [nunolau](https://github.com/nunolau)
-
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the MIT License.

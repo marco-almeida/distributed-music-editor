@@ -30,6 +30,10 @@ def delete_folder(*folder_path):
 def make_dirs(*folder_path):
     try:
         for folder in folder_path:
-            os.makedirs(folder, exist_ok=True)
+            try:
+                original_umask = os.umask(0)
+                os.makedirs(folder, exist_ok=True)
+            finally:
+                os.umask(original_umask)
     except Exception as e:
-        pass
+        print(f"failure creating folder {e}")

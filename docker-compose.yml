@@ -1,0 +1,7 @@
+version: "3"
+
+services:
+  dme-api:
+    image: dme-api:latest
+    restart: always # on-failure:10
+    network_mode: host

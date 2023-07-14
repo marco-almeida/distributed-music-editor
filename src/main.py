@@ -75,4 +75,4 @@ if __name__ == "__main__":
     settings.ip = args.ip
     settings.port = args.port
 
-    uvicorn.run("main:app", reload=True, host=args.ip, port=args.port)
+    uvicorn.run("main:app", host=args.ip, port=args.port)
