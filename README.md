@@ -17,13 +17,13 @@ Code snippet to split a track into multiple tracks provided by professors [mario
 
 ### Set Up with Docker
 
-To run the project with docker, run the following commands:
-
 ```bash
 cd redis
 docker compose up -d
+
 cd ../rabbitmq
 docker compose up -d
+
 cd ..
 docker build . -t dme-api
 docker compose up
@@ -31,21 +31,11 @@ docker compose up
 
 ### Set Up without Docker
 
-## Dependencies
-
-For Ubuntu (and other debian based linux), run the following commands:
-
 ```bash
 sudo apt install ffmpeg
 sudo apt install rabbitmq-server
 sudo apt install redis
-```
 
-## Setup
-
-Run the following commands to setup the environement:
-
-```bash
 python3 -m venv venv
 source venv/bin/activate
 
@@ -63,7 +53,7 @@ It is important to install the requirements following the previous instructions.
 By default, PyTorch will install the CUDA version of the library (over 4G simple from the virtual environment).
 As such, the current instructions force the installation of the CPU version of PyTorch and then installs Demucs.
 
-In case of celery workers shutting down unexpectedly, add the argument --autoscale=4,2. 4 is the maximum number of processes and 2 is the minimum number of processes.
+In case of celery workers shutting down unexpectedly, add the argument --autoscale=max,min e.g --autoscale=4,2. Make this change in the entrypoint.sh file too if using docker.
 
 > The autoscaler component is used to dynamically resize the pool based on load
 
