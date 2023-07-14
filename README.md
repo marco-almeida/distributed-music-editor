@@ -1,6 +1,5 @@
 # CD 2023 Project
-`celery -A main.celery worker --loglevel=info -Q music_processing`
-`celery -A main.celery flower --port=5555`
+
 Here we have a sample code that loads one mp3 file and splits it 
 into 4 tracks: vocals, drums, bass and other.
 

@@ -19,6 +19,8 @@ jobs = {}  # music_id to celery task id
 job_info = {}  # job id to job info
 ROOT = "/tmp/distributed-music-editor"
 
+CHUNK_LENGTH = 5 * 1000  # 5 seconds
+
 
 @router.post("/")
 async def submit_music(request: Request):
@@ -76,7 +78,7 @@ async def process_music(music_id: int, tracks: List[int]):
     tracks_str = [x["name"] for x in music[music_id]["tracks"] if x["track_id"] in tracks]
 
     # dispatch processing which will divide music into chunks and process each chunk in parallel
-    task = dispatch_process_music.delay(music_id, tracks_str, 3 * 1000)
+    task = dispatch_process_music.delay(music_id, tracks_str, CHUNK_LENGTH)
 
     ts = time.time()
     music[music_id]["start_time"] = ts

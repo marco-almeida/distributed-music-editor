@@ -1,3 +1,4 @@
+import os
 import shutil
 
 music_counter = 0
@@ -18,8 +19,17 @@ def get_track_id():
     return ctr
 
 
-def delete_folder(folder_path):
+def delete_folder(*folder_path):
     try:
-        shutil.rmtree(folder_path)
+        for folder in folder_path:
+            shutil.rmtree(folder)
+    except Exception as e:
+        pass
+
+
+def make_dirs(*folder_path):
+    try:
+        for folder in folder_path:
+            os.makedirs(folder, exist_ok=True)
     except Exception as e:
         pass

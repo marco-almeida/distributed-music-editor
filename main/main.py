@@ -6,26 +6,18 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
-
 from routers import music, system
-from routers.utils import delete_folder
+from routers.utils import delete_folder, make_dirs
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # before start up
-    delete_folder("/tmp/distributed-music-editor")
-    os.makedirs("/tmp/distributed-music-editor", exist_ok=True)
-    # if processed folder doesnt exist, create it
-    delete_folder("/tmp/distributed-music-editor/processed")
-    os.makedirs("/tmp/distributed-music-editor/processed", exist_ok=True)
-    # if originals folder doesnt exist, create it
-    delete_folder("/tmp/distributed-music-editor/originals")
-    os.makedirs("/tmp/distributed-music-editor/originals", exist_ok=True)
+    delete_folder("/tmp/distributed-music-editor", "/tmp/distributed-music-editor/processed", "/tmp/distributed-music-editor/originals")
+    make_dirs("/tmp/distributed-music-editor", "/tmp/distributed-music-editor/processed", "/tmp/distributed-music-editor/originals")
     yield
+    # after shutdown
     delete_folder("/tmp/distributed-music-editor")
-    delete_folder("/tmp/distributed-music-editor/processed")
-    delete_folder("/tmp/distributed-music-editor/originals")
 
 
 logging.basicConfig(
