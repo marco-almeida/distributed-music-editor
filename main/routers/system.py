@@ -15,5 +15,5 @@ async def list_job(job_id: str):
 
 
 @router.post("/reset")
-async def reset(prefix="/"):
+async def reset():
     pass

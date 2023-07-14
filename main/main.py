@@ -19,9 +19,13 @@ async def lifespan(app: FastAPI):
     # if processed folder doesnt exist, create it
     delete_folder("/tmp/distributed-music-editor/processed")
     os.makedirs("/tmp/distributed-music-editor/processed", exist_ok=True)
+    # if originals folder doesnt exist, create it
+    delete_folder("/tmp/distributed-music-editor/originals")
+    os.makedirs("/tmp/distributed-music-editor/originals", exist_ok=True)
     yield
     delete_folder("/tmp/distributed-music-editor")
     delete_folder("/tmp/distributed-music-editor/processed")
+    delete_folder("/tmp/distributed-music-editor/originals")
 
 
 logging.basicConfig(

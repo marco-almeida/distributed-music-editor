@@ -1,11 +1,13 @@
 import hashlib
 import os
 import time
+from io import BytesIO
 from typing import List
 
 from celery.result import AsyncResult
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import Response
+from mutagen.mp3 import MP3
 
 from celery_tasks.tasks import dispatch_process_music
 
@@ -14,7 +16,7 @@ from .utils import get_music_id, get_track_id
 router = APIRouter(prefix="/music", tags=["music"])
 music = {}  # music_id to metadata (tracks id...)
 jobs = {}  # music_id to celery task id
-job_info = {} # job id to job info
+job_info = {}  # job id to job info
 ROOT = "/tmp/distributed-music-editor"
 
 
@@ -27,10 +29,14 @@ async def submit_music(request: Request):
     body = await request.body()
     music_id = get_music_id()
 
-    # create folder to store music
+    # Load the MP3 file using Mutagen
+    audio = MP3(BytesIO(body))
+
+    # Extract the desired metadata
+    title = audio.get("title")
+    band = audio.get("band")
+
     dir_path = ROOT + "/originals"
-    if not os.path.exists(dir_path):
-        os.makedirs(dir_path)
 
     # write to file
     with open(f"{dir_path}/{music_id}.mp3", "wb") as f:
@@ -39,6 +45,8 @@ async def submit_music(request: Request):
     # store music id
     music[music_id] = {
         "music_id": music_id,
+        "name": title,
+        "band": band,
         "tracks": [
             {"name": "drums", "track_id": get_track_id()},
             {"name": "bass", "track_id": get_track_id()},
@@ -48,12 +56,12 @@ async def submit_music(request: Request):
         "size": len(body),
     }
 
-    return {"music_id": music_id, "tracks": music[music_id]["tracks"]}
+    return {"music_id": music_id, "name": music[music_id]["name"], "band": music[music_id]["band"], "tracks": music[music_id]["tracks"]}
 
 
 @router.get("/")
 async def list_all_music() -> List[dict]:
-    return [{"music_id": x["music_id"], "tracks": x["tracks"]} for x in music.values()]
+    return [{"music_id": x["music_id"], "name": x["name"], "band": x["band"], "tracks": x["tracks"]} for x in music.values()]
 
 
 @router.post("/{music_id}")
