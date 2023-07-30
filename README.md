@@ -1,17 +1,8 @@
 # Distributed Music Editor
 
-This project uses RabbitMQ, Redis, Celery and FastAPI to develop a system that, through a RESTful API, receives .mp3 files and splits them into multiple tracks/channels, e.g vocals, drums, bass, etc., as to allow the user to for example, separate the vocals from the rest of the track, in order to create a karaoke version of the song.
+This app enables users to split songs into distinct parts, such as vocals, drums, and more, allowing for customized versions, such as karaoke. Built with **FastAPI**, the app provides a **RESTful API** for submission and processing of .mp3 files. Utilizing the [demucs](https://github.com/facebookresearch/demucs) library with a deep learning model, tracks are separated into individual components. The **Celery** module handles processing by dividing the work into multiple jobs, all conveniently monitored through the API. RabbitMQ is used to distribute the work among multiple workers and Redis stores the results of the work.
 
 All work is done asynchronously and as simultaneously as possible.
-
-RabbitMQ is used to distribute the work among multiple workers. Redis is used to store the results of the work and Celery is used to manage the workers. FastAPI is used to develop the API.
-
-The codes uses one library named [demucs](https://github.com/facebookresearch/demucs),
-this library uses a deep learning model to separate the tracks.
-This library requires [ffmpeg](https://ffmpeg.org/) to work.
-It should be present in most Linux distributions.
-
-Code snippet to split a track into multiple tracks provided by professors [mariolpantunes](https://github.com/mariolpantunes), [dgomes](https://github.com/dgomes) and [nunolau](https://github.com/nunolau).
 
 ## Set Up
 
@@ -56,6 +47,10 @@ As such, the current instructions force the installation of the CPU version of P
 In case of celery workers shutting down unexpectedly, add the argument --autoscale=max,min e.g --autoscale=4,2. Make this change in the entrypoint.sh file too if using docker.
 
 > The autoscaler component is used to dynamically resize the pool based on load
+
+## Documentation
+
+Postman collection and environment available in the root directory. API documentation based on OpenAPI available in `/docs` endpoint.
 
 ## License
 
